@@ -3,9 +3,9 @@
 client.py - Cliente Card-Jitsu (Proyecto Final de Redes)
 ========================================================
 Uso:
-    python3 client.py <IP_SERVIDOR> [PUERTO]
-
-Si no se pasan argumentos usa 127.0.0.1:50007 por defecto.
+    python3 client.py              # usa SERVER_IP definida abajo
+    python3 client.py <IP>         # override por línea de comandos
+    python3 client.py <IP> <PUERTO>
 
 Cliente single-thread: el protocolo es request-response (el servidor
 manda REQUEST_PLAY cuando es tu turno), así que no hace falta lanzar
@@ -17,8 +17,12 @@ import socket
 import json
 import sys
 
-DEFAULT_HOST = '127.0.0.1'
-DEFAULT_PORT = 50007
+# ===========================================================================
+#  ⚙️  CONFIGURACIÓN — EDITAR AQUÍ ANTES DE EJECUTAR
+# ===========================================================================
+SERVER_IP   = "192.168.1.15"     # ← Reemplazá con la IP LAN del servidor
+SERVER_PORT = 55555              # ← Mismo puerto que el server.py
+# ===========================================================================
 
 ELEMENT_ES = {'fire': 'Fuego', 'snow': 'Nieve', 'water': 'Agua'}
 
@@ -112,8 +116,10 @@ def render_screen(hand: list, last_log: str, scores: dict,
 # main
 # ---------------------------------------------------------------------------
 def main():
-    host = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_HOST
-    port = int(sys.argv[2]) if len(sys.argv) > 2 else DEFAULT_PORT
+    # Permitir override por línea de comandos, pero por default usa las
+    # constantes SERVER_IP / SERVER_PORT definidas al inicio del archivo.
+    host = sys.argv[1] if len(sys.argv) > 1 else SERVER_IP
+    port = int(sys.argv[2]) if len(sys.argv) > 2 else SERVER_PORT
 
     clear()
     print(C.BOLD + C.CYAN + "  CARD-JITSU - CLIENTE" + C.RESET)

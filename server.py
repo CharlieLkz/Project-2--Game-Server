@@ -23,7 +23,7 @@ from datetime import datetime
 # Configuración
 # ---------------------------------------------------------------------------
 HOST = '0.0.0.0'          # Bind a todas las interfaces para aceptar conexiones LAN
-PORT = 50007              # Puerto TCP no privilegiado
+PORT = 55555              # Puerto TCP del servidor
 MAX_PLAYERS = 2
 ROUNDS_TO_WIN = 3
 ELEMENTS = ['fire', 'snow', 'water']
@@ -97,12 +97,13 @@ def resolve_round(c1: dict, c2: dict) -> int:
 # I/O JSON sobre el socket (framing por línea)
 # ---------------------------------------------------------------------------
 def send_json(player: dict, payload: dict) -> bool:
-    """Serializa el dict, agrega '\n' y lo envía. Incrementa Tx. Retorna False si falla."""
+    """Serializa el dict, agrega '\n' y lo envía. Incrementa Tx (paquetes y bytes). Retorna False si falla."""
     try:
         data = (json.dumps(payload) + '\n').encode('utf-8')
         player['conn'].sendall(data)
         with state_lock:
             player['tx_count'] += 1
+            player['tx_bytes'] += len(data)
         return True
     except (OSError, BrokenPipeError, ConnectionResetError):
         return False
@@ -142,10 +143,12 @@ def player_listener(player_id: int):
             if msg is None:
                 break                       # cliente cerró el socket
 
-            # Telemetría: guardamos el payload crudo y subimos Rx
+            # Telemetría: guardamos el payload crudo y subimos Rx (paquetes y bytes)
             with state_lock:
                 player['rx_count'] += 1
-                player['last_payload'] = json.dumps(msg)
+                raw = json.dumps(msg)
+                player['rx_bytes'] += len(raw.encode('utf-8')) + 1  # +1 por el '\n'
+                player['last_payload'] = raw
 
             action = msg.get('action')
             if action == 'JOIN':
@@ -334,9 +337,9 @@ def render_dashboard():
     """Construye el frame del dashboard y lo escribe a stdout."""
     out = [C.CLEAR]
     out.append(C.BOLD + C.CYAN +
-               "╔══════════════════════════════════════════════════════════════════════════════╗\n"
-               "║  CARD-JITSU SERVER · DASHBOARD DE TELEMETRÍA                                 ║\n"
-               "╚══════════════════════════════════════════════════════════════════════════════╝\n"
+               "╔═══════════════════════════════════════════════════════════════════════════════════════╗\n"
+               "║  CARD-JITSU SERVER · DASHBOARD DE TELEMETRÍA                                          ║\n"
+               "╚═══════════════════════════════════════════════════════════════════════════════════════╝\n"
                + C.RESET)
 
     with state_lock:
@@ -344,26 +347,26 @@ def render_dashboard():
         out.append(f"  {C.BOLD}Hora:{C.RESET} {datetime.now().strftime('%H:%M:%S')}")
         out.append(f"  {C.BOLD}Bind:{C.RESET} {HOST}:{PORT}\n\n")
 
-        out.append("  ┌─────┬──────────────────────┬──────────────┬────────┬────────┬──────────┐\n")
+        out.append("  ┌─────┬──────────────────────┬──────────────┬───────────────┬───────────────┬─────────┐\n")
         out.append(C.BOLD +
-                   "  │ ID  │ Endpoint (IP:Puerto) │ Estado       │   Tx   │   Rx   │ Score    │\n"
+                   "  │ ID  │ Endpoint (IP:Puerto) │ Estado       │   Tx (pkt/B)  │   Rx (pkt/B)  │ Score   │\n"
                    + C.RESET)
-        out.append("  ├─────┼──────────────────────┼──────────────┼────────┼────────┼──────────┤\n")
+        out.append("  ├─────┼──────────────────────┼──────────────┼───────────────┼───────────────┼─────────┤\n")
         for pid in (1, 2):
             if pid in players:
                 p = players[pid]
                 ep = f"{p['addr'][0]}:{p['addr'][1]}"
                 score_str = f"{p.get('score', 0)}/{ROUNDS_TO_WIN}"
+                tx_str = f"{p['tx_count']}/{p['tx_bytes']}B"
+                rx_str = f"{p['rx_count']}/{p['rx_bytes']}B"
                 out.append(
-                    f"  │ P{pid}  │ {ep:<20} │ {p['status']:<12} │ {p['tx_count']:>6} │ "
-                    f"{p['rx_count']:>6} │ {score_str:<8} │\n"
+                    f"  │ P{pid}  │ {ep:<20} │ {p['status']:<12} │ {tx_str:<13} │ {rx_str:<13} │ {score_str:<7} │\n"
                 )
             else:
                 out.append(
-                    f"  │ P{pid}  │ {'(sin conectar)':<20} │ {'OFFLINE':<12} │ {'-':>6} │ "
-                    f"{'-':>6} │ {'-':<8} │\n"
+                    f"  │ P{pid}  │ {'(sin conectar)':<20} │ {'OFFLINE':<12} │ {'-':<13} │ {'-':<13} │ {'-':<7} │\n"
                 )
-        out.append("  └─────┴──────────────────────┴──────────────┴────────┴────────┴──────────┘\n\n")
+        out.append("  └─────┴──────────────────────┴──────────────┴───────────────┴───────────────┴─────────┘\n\n")
 
         out.append(f"  {C.BOLD}Último payload JSON recibido:{C.RESET}\n")
         for pid in (1, 2):
@@ -409,6 +412,8 @@ def accept_loop(server_sock: socket.socket):
                 'last_payload': '',
                 'tx_count': 0,
                 'rx_count': 0,
+                'tx_bytes': 0,
+                'rx_bytes': 0,
                 'status': 'CONNECTED',
                 'play_event': threading.Event(),
                 'current_play': None,
