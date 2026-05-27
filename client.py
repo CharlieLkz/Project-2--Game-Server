@@ -20,8 +20,8 @@ import sys
 # ===========================================================================
 #  ⚙️  CONFIGURACIÓN — EDITAR AQUÍ ANTES DE EJECUTAR
 # ===========================================================================
-SERVER_IP   = "192.168.1.15"     # ← Reemplazá con la IP LAN del servidor
-SERVER_PORT = 55555              # ← Mismo puerto que el server.py
+SERVER_IP   = "10.66.66.36"     # ← Reemplazá con la IP LAN del servidor
+SERVER_PORT = 55555              # ← Mismo puerto que el server.py 
 # ===========================================================================
 
 ELEMENT_ES = {'fire': 'Fuego', 'snow': 'Nieve', 'water': 'Agua'}

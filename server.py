@@ -153,7 +153,7 @@ def player_listener(player_id: int):
             action = msg.get('action')
             if action == 'JOIN':
                 player['name'] = msg.get('name', f'Player{player_id}')
-                log_event(f"P{player_id} ({player['name']}) JOIN")
+                log_event(f"Player {player_id} es: {player['name']}")
 
             elif action == 'PLAY':
                 card_id = msg.get('card_id')
@@ -163,15 +163,15 @@ def player_listener(player_id: int):
                     player['current_play'] = card
                     player['status'] = 'PLAYED'
                     player['play_event'].set()     # despierta al game_loop
-                    log_event(f"P{player_id} jugó {ELEMENT_ES[card['element']]} {card['value']}")
+                    log_event(f"{player['name']} jugó {ELEMENT_ES[card['element']]} {card['value']}")
                 else:
-                    log_event(f"P{player_id} envió card_id inválido: {card_id}")
+                    log_event(f"{player['name']} envió card_id inválido: {card_id}")
 
             elif action == 'QUIT':
-                log_event(f"P{player_id} QUIT voluntario")
+                log_event(f"{player['name']} QUIT voluntario")
                 break
     except Exception as e:
-        log_event(f"P{player_id} error: {e}")
+        log_event(f"{player['name']} error: {e}")
     finally:
         # Marcar desconexión y despertar al game_loop por si estaba esperando
         with state_lock:
@@ -248,7 +248,7 @@ def game_loop():
         while not (p1_done and p2_done):
             if not p1_done and players[1]['play_event'].wait(timeout=0.1):
                 if players[1].get('disconnected'):
-                    log_event("P1 se desconectó durante la ronda. Cancelando.")
+                    log_event(f"{players[1]['name']} se desconectó durante la ronda. Cancelando.")
                     return
                 p1_done = True
                 if not p2_done:
@@ -256,7 +256,7 @@ def game_loop():
                                            'message': 'El rival ya jugó. Esperando tu jugada.'})
             if not p2_done and players[2]['play_event'].wait(timeout=0.1):
                 if players[2].get('disconnected'):
-                    log_event("P2 se desconectó durante la ronda. Cancelando.")
+                    log_event(f"{players[2]['name']} se desconectó durante la ronda. Cancelando.")
                     return
                 p2_done = True
                 if not p1_done:
@@ -278,7 +278,7 @@ def game_loop():
             elif winner == 2:
                 players[2]['score'] += 1
         log_event(f"Resultado ronda {round_num}: " +
-                  (f"P{winner} gana" if winner else "Empate"))
+                  (f"{players[winner]['name']} gana" if winner else "Empate"))
 
         # Reponer las cartas jugadas
         with state_lock:
@@ -312,7 +312,7 @@ def game_loop():
         # ¿Alguien llegó a 3?
         if players[1]['score'] >= ROUNDS_TO_WIN or players[2]['score'] >= ROUNDS_TO_WIN:
             winner_pid = 1 if players[1]['score'] >= ROUNDS_TO_WIN else 2
-            log_event(f"GAME OVER. P{winner_pid} gana la partida.")
+            log_event(f"GAME OVER. {players[winner_pid]['name']} gana la partida.")
             for pid in (1, 2):
                 send_json(players[pid], {
                     'action': 'GAME_OVER',
@@ -345,38 +345,40 @@ def render_dashboard():
     with state_lock:
         out.append(f"  {C.BOLD}Estado:{C.RESET} {C.YELLOW}{game_status:<20}{C.RESET}")
         out.append(f"  {C.BOLD}Hora:{C.RESET} {datetime.now().strftime('%H:%M:%S')}")
-        out.append(f"  {C.BOLD}Bind:{C.RESET} {HOST}:{PORT}\n\n")
+        out.append(f"  {C.BOLD}Puerto:{C.RESET} {PORT}\n\n")
 
-        out.append("  ┌─────┬──────────────────────┬──────────────┬───────────────┬───────────────┬─────────┐\n")
+        out.append("  ┌──────────────────────┬──────────────────────┬──────────────┬───────────────┬───────────────┬─────────┐\n")
         out.append(C.BOLD +
-                   "  │ ID  │ Endpoint (IP:Puerto) │ Estado       │   Tx (pkt/B)  │   Rx (pkt/B)  │ Score   │\n"
+                   "  │ Nombre (Player)      │ Endpoint (IP:Puerto) │ Estado       │   Tx (pkt/B)  │   Rx (pkt/B)  │ Score   │\n"
                    + C.RESET)
-        out.append("  ├─────┼──────────────────────┼──────────────┼───────────────┼───────────────┼─────────┤\n")
+        out.append("  ├──────────────────────┼──────────────────────┼──────────────┼───────────────┼───────────────┼─────────┤\n")
         for pid in (1, 2):
             if pid in players:
                 p = players[pid]
+                name = p.get('name', f'Player{pid}')
                 ep = f"{p['addr'][0]}:{p['addr'][1]}"
                 score_str = f"{p.get('score', 0)}/{ROUNDS_TO_WIN}"
                 tx_str = f"{p['tx_count']}/{p['tx_bytes']}B"
                 rx_str = f"{p['rx_count']}/{p['rx_bytes']}B"
                 out.append(
-                    f"  │ P{pid}  │ {ep:<20} │ {p['status']:<12} │ {tx_str:<13} │ {rx_str:<13} │ {score_str:<7} │\n"
+                    f"  │ {name:<20} │ {ep:<20} │ {p['status']:<12} │ {tx_str:<13} │ {rx_str:<13} │ {score_str:<7} │\n"
                 )
             else:
                 out.append(
-                    f"  │ P{pid}  │ {'(sin conectar)':<20} │ {'OFFLINE':<12} │ {'-':<13} │ {'-':<13} │ {'-':<7} │\n"
+                    f"  │ {'(sin conectar)':<20} │ {'(sin conectar)':<20} │ {'OFFLINE':<12} │ {'-':<13} │ {'-':<13} │ {'-':<7} │\n"
                 )
-        out.append("  └─────┴──────────────────────┴──────────────┴───────────────┴───────────────┴─────────┘\n\n")
+        out.append("  └──────────────────────┴──────────────────────┴──────────────┴───────────────┴───────────────┴─────────┘\n\n")
 
         out.append(f"  {C.BOLD}Último payload JSON recibido:{C.RESET}\n")
         for pid in (1, 2):
             if pid in players:
+                name = players[pid].get('name', f'Player{pid}')
                 last = players[pid].get('last_payload') or '(ninguno)'
                 if len(last) > 70:
                     last = last[:67] + '...'
-                out.append(f"    {C.MAGENTA}P{pid}:{C.RESET} {last}\n")
+                out.append(f"    {C.MAGENTA}{name}:{C.RESET} {last}\n")
             else:
-                out.append(f"    {C.DIM}P{pid}: -{C.RESET}\n")
+                out.append(f"    {C.DIM}Player {pid}: -{C.RESET}\n")
         out.append("\n")
 
         out.append(f"  {C.BOLD}Log de eventos:{C.RESET}\n")
@@ -420,7 +422,7 @@ def accept_loop(server_sock: socket.socket):
                 'score': 0,
                 'disconnected': False
             }
-        log_event(f"Conexión aceptada {addr[0]}:{addr[1]} -> P{pid_counter}")
+        log_event(f"Player {pid_counter} conectado desde {addr[0]}:{addr[1]}")
         threading.Thread(target=player_listener, args=(pid_counter,), daemon=True).start()
         pid_counter += 1
 
