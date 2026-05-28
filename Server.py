@@ -26,9 +26,37 @@ HOST = '0.0.0.0'          # Bind a todas las interfaces para aceptar conexiones 
 PORT = 55555              # Puerto TCP del servidor
 MAX_PLAYERS = 2
 ROUNDS_TO_WIN = 3
+HAND_SIZE = 5             # Cartas en mano por jugador (5 como el Card-Jitsu real)
 ELEMENTS = ['fire', 'snow', 'water']
 ELEMENT_ES = {'fire': 'Fuego', 'snow': 'Nieve', 'water': 'Agua'}
 TICK_RATE = 0.25          # Refresh del dashboard (segundos)
+DECK_JSON_PATH = 'deck.json'   # Mazo generado por scrape_assets.py
+
+# Colores permitidos para el pingüino (debe matchear lo del cliente GUI)
+PENGUIN_COLORS = ['red', 'blue', 'green', 'yellow', 'pink', 'purple', 'black', 'orange']
+
+# ---------------------------------------------------------------------------
+# Carga del mazo
+# ---------------------------------------------------------------------------
+DECK = []                 # Lista de cartas template cargadas del JSON
+DECK_LOADED = False
+
+def load_deck():
+    """
+    Carga deck.json si existe. Si no, queda vacío y caemos al modo random
+    (compatibilidad con la versión TUI que no usa imágenes).
+    """
+    global DECK, DECK_LOADED
+    try:
+        with open('deck_gui.json', 'r', encoding='utf-8') as f:
+            DECK = json.load(f)
+        DECK = data.get('cards', [])
+        DECK_LOADED = len(DECK) > 0
+        return len(DECK)
+    except (FileNotFoundError, json.JSONDecodeError):
+        DECK = []
+        DECK_LOADED = False
+        return 0
 
 # ---------------------------------------------------------------------------
 # Secuencias ANSI (sin dependencias externas)
@@ -69,11 +97,25 @@ def log_event(msg: str):
             event_log.pop(0)
 
 def make_card(card_id: int) -> dict:
-    """Genera una carta aleatoria con id único."""
+    """
+    Genera una carta con id único.
+    Si deck.json fue cargado, toma una carta random del mazo (con su ref_image).
+    Si no, genera valores random (modo TUI/legacy).
+    """
+    if DECK_LOADED and DECK:
+        template = random.choice(DECK)
+        return {
+            'id': card_id,
+            'element': template['element'],
+            'value': template['value'],
+            'ref_image': template.get('ref_image', ''),
+            'color': template.get('color', ''),
+        }
+    # Fallback: modo random sin imágenes (compatible con cliente TUI)
     return {
         'id': card_id,
         'element': random.choice(ELEMENTS),
-        'value': random.randint(1, 10)
+        'value': random.randint(2, 12),
     }
 
 def resolve_round(c1: dict, c2: dict) -> int:
@@ -153,7 +195,12 @@ def player_listener(player_id: int):
             action = msg.get('action')
             if action == 'JOIN':
                 player['name'] = msg.get('name', f'Player{player_id}')
-                log_event(f"Player {player_id} es: {player['name']}")
+                # Validar color del pingüino (default rojo si no llega o es inválido)
+                color = msg.get('penguin_color', 'red')
+                if color not in PENGUIN_COLORS:
+                    color = 'red'
+                player['penguin_color'] = color
+                log_event(f"Player {player_id} es: {player['name']} ({color})")
 
             elif action == 'PLAY':
                 card_id = msg.get('card_id')
@@ -203,18 +250,27 @@ def game_loop():
     # Inicializar estado de cada jugador
     with state_lock:
         for pid in (1, 2):
-            players[pid]['hand'] = [make_card(next_card_id + i) for i in range(3)]
+            players[pid]['hand'] = [make_card(next_card_id + i) for i in range(HAND_SIZE)]
             players[pid]['score'] = 0
             players[pid]['status'] = 'READY'
-        next_card_id += 3
+        next_card_id += HAND_SIZE
         game_status = "GAME_IN_PROGRESS"
 
     # Enviar bienvenida + mano inicial
     for pid in (1, 2):
+        opp = 3 - pid
         send_json(players[pid], {
             'action': 'WELCOME',
             'player_id': pid,
-            'rounds_to_win': ROUNDS_TO_WIN
+            'rounds_to_win': ROUNDS_TO_WIN,
+            'you': {
+                'name': players[pid].get('name', f'Player{pid}'),
+                'penguin_color': players[pid].get('penguin_color', 'red'),
+            },
+            'opponent': {
+                'name': players[opp].get('name', f'Player{opp}'),
+                'penguin_color': players[opp].get('penguin_color', 'red'),
+            },
         })
         send_json(players[pid], {'action': 'DEAL', 'hand': players[pid]['hand']})
 
@@ -347,27 +403,28 @@ def render_dashboard():
         out.append(f"  {C.BOLD}Hora:{C.RESET} {datetime.now().strftime('%H:%M:%S')}")
         out.append(f"  {C.BOLD}Puerto:{C.RESET} {PORT}\n\n")
 
-        out.append("  ┌──────────────────────┬──────────────────────┬──────────────┬───────────────┬───────────────┬─────────┐\n")
+        out.append("  ┌──────────────────────┬─────────┬──────────────────────┬──────────────┬───────────────┬───────────────┬─────────┐\n")
         out.append(C.BOLD +
-                   "  │ Nombre (Player)      │ Endpoint (IP:Puerto) │ Estado       │   Tx (pkt/B)  │   Rx (pkt/B)  │ Score   │\n"
+                   "  │ Nombre (Player)      │ Color   │ Endpoint (IP:Puerto) │ Estado       │   Tx (pkt/B)  │   Rx (pkt/B)  │ Score   │\n"
                    + C.RESET)
-        out.append("  ├──────────────────────┼──────────────────────┼──────────────┼───────────────┼───────────────┼─────────┤\n")
+        out.append("  ├──────────────────────┼─────────┼──────────────────────┼──────────────┼───────────────┼───────────────┼─────────┤\n")
         for pid in (1, 2):
             if pid in players:
                 p = players[pid]
                 name = p.get('name', f'Player{pid}')
+                color = p.get('penguin_color', '-')
                 ep = f"{p['addr'][0]}:{p['addr'][1]}"
                 score_str = f"{p.get('score', 0)}/{ROUNDS_TO_WIN}"
                 tx_str = f"{p['tx_count']}/{p['tx_bytes']}B"
                 rx_str = f"{p['rx_count']}/{p['rx_bytes']}B"
                 out.append(
-                    f"  │ {name:<20} │ {ep:<20} │ {p['status']:<12} │ {tx_str:<13} │ {rx_str:<13} │ {score_str:<7} │\n"
+                    f"  │ {name:<20} │ {color:<7} │ {ep:<20} │ {p['status']:<12} │ {tx_str:<13} │ {rx_str:<13} │ {score_str:<7} │\n"
                 )
             else:
                 out.append(
-                    f"  │ {'(sin conectar)':<20} │ {'(sin conectar)':<20} │ {'OFFLINE':<12} │ {'-':<13} │ {'-':<13} │ {'-':<7} │\n"
+                    f"  │ {'(sin conectar)':<20} │ {'-':<7} │ {'(sin conectar)':<20} │ {'OFFLINE':<12} │ {'-':<13} │ {'-':<13} │ {'-':<7} │\n"
                 )
-        out.append("  └──────────────────────┴──────────────────────┴──────────────┴───────────────┴───────────────┴─────────┘\n\n")
+        out.append("  └──────────────────────┴─────────┴──────────────────────┴──────────────┴───────────────┴───────────────┴─────────┘\n\n")
 
         out.append(f"  {C.BOLD}Último payload JSON recibido:{C.RESET}\n")
         for pid in (1, 2):
@@ -410,6 +467,7 @@ def accept_loop(server_sock: socket.socket):
                 'conn': conn,
                 'addr': addr,
                 'name': f'Player{pid_counter}',
+                'penguin_color': 'red',
                 'hand': [],
                 'last_payload': '',
                 'tx_count': 0,
@@ -431,6 +489,12 @@ def accept_loop(server_sock: socket.socket):
 # ---------------------------------------------------------------------------
 def main():
     global running
+    n_cards = load_deck()
+    if n_cards > 0:
+        log_event(f"Mazo cargado desde {DECK_JSON_PATH}: {n_cards} cartas")
+    else:
+        log_event(f"Sin {DECK_JSON_PATH}: usando modo random (sin imágenes)")
+
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_sock.bind((HOST, PORT))

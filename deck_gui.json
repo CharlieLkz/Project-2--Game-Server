@@ -1,0 +1,326 @@
+[
+    {
+        "id": 0,
+        "nombre": "Fuego 2",
+        "elemento": "Fuego",
+        "valor": 2,
+        "assets": {
+            "background": "assets/backgrounds/red.png",
+            "penguin": "assets/cards/5.png",
+            "number": "assets/numbers/2.png",
+            "icon": "assets/icons/icon_fire.png"
+        }
+    },
+    {
+        "id": 1,
+        "nombre": "Fuego 3",
+        "elemento": "Fuego",
+        "valor": 3,
+        "assets": {
+            "background": "assets/backgrounds/red.png",
+            "penguin": "assets/cards/2.png",
+            "number": "assets/numbers/3.png",
+            "icon": "assets/icons/icon_fire.png"
+        }
+    },
+    {
+        "id": 2,
+        "nombre": "Fuego 4",
+        "elemento": "Fuego",
+        "valor": 4,
+        "assets": {
+            "background": "assets/backgrounds/red.png",
+            "penguin": "assets/cards/6.png",
+            "number": "assets/numbers/4.png",
+            "icon": "assets/icons/icon_fire.png"
+        }
+    },
+    {
+        "id": 3,
+        "nombre": "Fuego 5",
+        "elemento": "Fuego",
+        "valor": 5,
+        "assets": {
+            "background": "assets/backgrounds/red.png",
+            "penguin": "assets/cards/6.png",
+            "number": "assets/numbers/5.png",
+            "icon": "assets/icons/icon_fire.png"
+        }
+    },
+    {
+        "id": 4,
+        "nombre": "Fuego 6",
+        "elemento": "Fuego",
+        "valor": 6,
+        "assets": {
+            "background": "assets/backgrounds/red.png",
+            "penguin": "assets/cards/2.png",
+            "number": "assets/numbers/6.png",
+            "icon": "assets/icons/icon_fire.png"
+        }
+    },
+    {
+        "id": 5,
+        "nombre": "Fuego 7",
+        "elemento": "Fuego",
+        "valor": 7,
+        "assets": {
+            "background": "assets/backgrounds/red.png",
+            "penguin": "assets/cards/5.png",
+            "number": "assets/numbers/7.png",
+            "icon": "assets/icons/icon_fire.png"
+        }
+    },
+    {
+        "id": 6,
+        "nombre": "Fuego 8",
+        "elemento": "Fuego",
+        "valor": 8,
+        "assets": {
+            "background": "assets/backgrounds/yellow.png",
+            "penguin": "assets/cards/1.png",
+            "number": "assets/numbers/8.png",
+            "icon": "assets/icons/icon_fire.png"
+        }
+    },
+    {
+        "id": 7,
+        "nombre": "Fuego 9",
+        "elemento": "Fuego",
+        "valor": 9,
+        "assets": {
+            "background": "assets/backgrounds/yellow.png",
+            "penguin": "assets/cards/13.png",
+            "number": "assets/numbers/9.png",
+            "icon": "assets/icons/icon_fire.png"
+        }
+    },
+    {
+        "id": 8,
+        "nombre": "Fuego 10",
+        "elemento": "Fuego",
+        "valor": 10,
+        "assets": {
+            "background": "assets/backgrounds/yellow.png",
+            "penguin": "assets/cards/8.png",
+            "number": "assets/numbers/10.png",
+            "icon": "assets/icons/icon_fire.png"
+        }
+    },
+    {
+        "id": 9,
+        "nombre": "Agua 2",
+        "elemento": "Agua",
+        "valor": 2,
+        "assets": {
+            "background": "assets/backgrounds/blue.png",
+            "penguin": "assets/cards/13.png",
+            "number": "assets/numbers/2.png",
+            "icon": "assets/icons/icon_water.png"
+        }
+    },
+    {
+        "id": 10,
+        "nombre": "Agua 3",
+        "elemento": "Agua",
+        "valor": 3,
+        "assets": {
+            "background": "assets/backgrounds/blue.png",
+            "penguin": "assets/cards/6.png",
+            "number": "assets/numbers/3.png",
+            "icon": "assets/icons/icon_water.png"
+        }
+    },
+    {
+        "id": 11,
+        "nombre": "Agua 4",
+        "elemento": "Agua",
+        "valor": 4,
+        "assets": {
+            "background": "assets/backgrounds/blue.png",
+            "penguin": "assets/cards/2.png",
+            "number": "assets/numbers/4.png",
+            "icon": "assets/icons/icon_water.png"
+        }
+    },
+    {
+        "id": 12,
+        "nombre": "Agua 5",
+        "elemento": "Agua",
+        "valor": 5,
+        "assets": {
+            "background": "assets/backgrounds/blue.png",
+            "penguin": "assets/cards/7.png",
+            "number": "assets/numbers/5.png",
+            "icon": "assets/icons/icon_water.png"
+        }
+    },
+    {
+        "id": 13,
+        "nombre": "Agua 6",
+        "elemento": "Agua",
+        "valor": 6,
+        "assets": {
+            "background": "assets/backgrounds/blue.png",
+            "penguin": "assets/cards/6.png",
+            "number": "assets/numbers/6.png",
+            "icon": "assets/icons/icon_water.png"
+        }
+    },
+    {
+        "id": 14,
+        "nombre": "Agua 7",
+        "elemento": "Agua",
+        "valor": 7,
+        "assets": {
+            "background": "assets/backgrounds/blue.png",
+            "penguin": "assets/cards/7.png",
+            "number": "assets/numbers/7.png",
+            "icon": "assets/icons/icon_water.png"
+        }
+    },
+    {
+        "id": 15,
+        "nombre": "Agua 8",
+        "elemento": "Agua",
+        "valor": 8,
+        "assets": {
+            "background": "assets/backgrounds/yellow.png",
+            "penguin": "assets/cards/2.png",
+            "number": "assets/numbers/8.png",
+            "icon": "assets/icons/icon_water.png"
+        }
+    },
+    {
+        "id": 16,
+        "nombre": "Agua 9",
+        "elemento": "Agua",
+        "valor": 9,
+        "assets": {
+            "background": "assets/backgrounds/yellow.png",
+            "penguin": "assets/cards/6.png",
+            "number": "assets/numbers/9.png",
+            "icon": "assets/icons/icon_water.png"
+        }
+    },
+    {
+        "id": 17,
+        "nombre": "Agua 10",
+        "elemento": "Agua",
+        "valor": 10,
+        "assets": {
+            "background": "assets/backgrounds/yellow.png",
+            "penguin": "assets/cards/5.png",
+            "number": "assets/numbers/10.png",
+            "icon": "assets/icons/icon_water.png"
+        }
+    },
+    {
+        "id": 18,
+        "nombre": "Nieve 2",
+        "elemento": "Nieve",
+        "valor": 2,
+        "assets": {
+            "background": "assets/backgrounds/purple.png",
+            "penguin": "assets/cards/4.png",
+            "number": "assets/numbers/2.png",
+            "icon": "assets/icons/icon_snow.png"
+        }
+    },
+    {
+        "id": 19,
+        "nombre": "Nieve 3",
+        "elemento": "Nieve",
+        "valor": 3,
+        "assets": {
+            "background": "assets/backgrounds/purple.png",
+            "penguin": "assets/cards/8.png",
+            "number": "assets/numbers/3.png",
+            "icon": "assets/icons/icon_snow.png"
+        }
+    },
+    {
+        "id": 20,
+        "nombre": "Nieve 4",
+        "elemento": "Nieve",
+        "valor": 4,
+        "assets": {
+            "background": "assets/backgrounds/purple.png",
+            "penguin": "assets/cards/11.png",
+            "number": "assets/numbers/4.png",
+            "icon": "assets/icons/icon_snow.png"
+        }
+    },
+    {
+        "id": 21,
+        "nombre": "Nieve 5",
+        "elemento": "Nieve",
+        "valor": 5,
+        "assets": {
+            "background": "assets/backgrounds/purple.png",
+            "penguin": "assets/cards/5.png",
+            "number": "assets/numbers/5.png",
+            "icon": "assets/icons/icon_snow.png"
+        }
+    },
+    {
+        "id": 22,
+        "nombre": "Nieve 6",
+        "elemento": "Nieve",
+        "valor": 6,
+        "assets": {
+            "background": "assets/backgrounds/purple.png",
+            "penguin": "assets/cards/8.png",
+            "number": "assets/numbers/6.png",
+            "icon": "assets/icons/icon_snow.png"
+        }
+    },
+    {
+        "id": 23,
+        "nombre": "Nieve 7",
+        "elemento": "Nieve",
+        "valor": 7,
+        "assets": {
+            "background": "assets/backgrounds/purple.png",
+            "penguin": "assets/cards/11.png",
+            "number": "assets/numbers/7.png",
+            "icon": "assets/icons/icon_snow.png"
+        }
+    },
+    {
+        "id": 24,
+        "nombre": "Nieve 8",
+        "elemento": "Nieve",
+        "valor": 8,
+        "assets": {
+            "background": "assets/backgrounds/yellow.png",
+            "penguin": "assets/cards/14.png",
+            "number": "assets/numbers/8.png",
+            "icon": "assets/icons/icon_snow.png"
+        }
+    },
+    {
+        "id": 25,
+        "nombre": "Nieve 9",
+        "elemento": "Nieve",
+        "valor": 9,
+        "assets": {
+            "background": "assets/backgrounds/yellow.png",
+            "penguin": "assets/cards/13.png",
+            "number": "assets/numbers/9.png",
+            "icon": "assets/icons/icon_snow.png"
+        }
+    },
+    {
+        "id": 26,
+        "nombre": "Nieve 10",
+        "elemento": "Nieve",
+        "valor": 10,
+        "assets": {
+            "background": "assets/backgrounds/yellow.png",
+            "penguin": "assets/cards/1.png",
+            "number": "assets/numbers/10.png",
+            "icon": "assets/icons/icon_snow.png"
+        }
+    }
+]
