@@ -40,6 +40,7 @@ if len(sys.argv) > 2:
     SERVER_PORT = int(sys.argv[2])
 
 ASSETS_DIR = "assets"
+MUSIC_DIR = "music"
 PENGUIN_PATHS = [
     os.path.join(ASSETS_DIR, "penguins", "PinguinGeneric.png"),
     os.path.join(ASSETS_DIR, "penguins", "PinguinGeneric.PNG"),
@@ -73,6 +74,75 @@ PENGUIN_COLORS = [
 PENGUIN_RGB = dict(PENGUIN_COLORS)
 
 ELEMENT_ES = {'fire': 'Fuego', 'snow': 'Nieve', 'water': 'Agua'}
+
+
+# ---------------------------------------------------------------------------
+# Audio manager: música de fondo (lobby/combate) + efectos por elemento
+# Si una pista falta, no crashea: solo lo loguea y sigue.
+# ---------------------------------------------------------------------------
+class AudioManager:
+    def __init__(self):
+        self.ok = False
+        try:
+            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+            self.ok = True
+        except pygame.error as e:
+            print(f"[audio] no se pudo inicializar mixer: {e}")
+            return
+
+        # Cargar efectos cortos en memoria (más responsivos que music)
+        self.sfx = {}
+        for el in ("fire", "snow", "water"):
+            path = os.path.join(MUSIC_DIR, f"{el}.mp3")
+            if os.path.exists(path):
+                try:
+                    self.sfx[el] = pygame.mixer.Sound(path)
+                    self.sfx[el].set_volume(0.8)
+                except pygame.error as e:
+                    print(f"[audio] no pude cargar {path}: {e}")
+            else:
+                print(f"[audio] no existe {path}")
+
+        self.current_music = None   # 'lobby' | 'background' | None
+
+    def play_music(self, kind, volume=0.5):
+        """kind: 'lobby' o 'background'. Loop infinito hasta stop_music()."""
+        if not self.ok:
+            return
+        if self.current_music == kind:
+            return
+        path = os.path.join(MUSIC_DIR, f"{kind}.mp3")
+        if not os.path.exists(path):
+            print(f"[audio] no existe {path}")
+            return
+        try:
+            pygame.mixer.music.stop()
+            pygame.mixer.music.load(path)
+            pygame.mixer.music.set_volume(volume)
+            pygame.mixer.music.play(loops=-1)
+            self.current_music = kind
+        except pygame.error as e:
+            print(f"[audio] error reproduciendo {path}: {e}")
+
+    def stop_music(self):
+        if not self.ok:
+            return
+        try:
+            pygame.mixer.music.stop()
+        except pygame.error:
+            pass
+        self.current_music = None
+
+    def play_sfx(self, element):
+        """Reproduce el efecto del elemento jugado (fire/snow/water)."""
+        if not self.ok:
+            return
+        s = self.sfx.get(element)
+        if s:
+            try:
+                s.play()
+            except pygame.error:
+                pass
 
 
 class NetClient:
@@ -236,6 +306,9 @@ class Game:
         self.f_body  = pygame.font.SysFont('arial', 22)
         self.f_small = pygame.font.SysFont('arial', 18)
 
+        # Audio (música + efectos)
+        self.audio = AudioManager()
+
         self.net = NetClient()
         self.state = "LOBBY"
         self.name = ""
@@ -309,6 +382,8 @@ class Game:
                 self.opponent = msg.get('opponent', self.opponent)
             elif action == 'DEAL':
                 self.hand = msg['hand']
+                # Cambiar de lobby.mp3 a background.mp3 al arrancar el combate
+                self.audio.play_music('background', volume=0.35)
                 self.state = "COMBATE"
                 self._rebuild_cards()
             elif action == 'REQUEST_PLAY':
@@ -343,6 +418,7 @@ class Game:
                 fs = msg.get('final_scores', {})
                 self.my_score = fs.get('you', self.my_score)
                 self.opp_score = fs.get('opponent', self.opp_score)
+                self.audio.stop_music()
                 self.state = "FIN"
 
     def _rebuild_cards(self):
@@ -359,6 +435,10 @@ class Game:
     def play_card(self, card_id):
         if self.waiting_play:
             return
+        # Reproducir el efecto del elemento de la carta jugada
+        played = next((c for c in self.hand if c.get('id') == card_id), None)
+        if played:
+            self.audio.play_sfx(played.get('element', ''))
         self.waiting_play = True
         self.net.send({'action': 'PLAY', 'card_id': card_id})
         self.last_log = "Esperando al rival..."
@@ -493,6 +573,8 @@ class Game:
                        'penguin_color': self.color})
         self.me = {"name": self.name.strip(), "penguin_color": self.color}
         self.typing = False
+        # Música del lobby mientras espera al otro jugador
+        self.audio.play_music('lobby', volume=0.4)
         self.state = "ESPERA"
 
     def restart(self):
@@ -506,10 +588,12 @@ class Game:
         self.my_won_elements = []; self.opp_won_elements = []
         self.final_result = None
         self.typing = True
+        self.audio.stop_music()
 
     def quit_game(self):
         self.net.send({'action': 'QUIT'})
         self.net.close()
+        self.audio.stop_music()
         pygame.quit()
         sys.exit(0)
 
