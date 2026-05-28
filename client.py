@@ -30,7 +30,7 @@ import sys
 # ===========================================================================
 #  CONFIGURACION - EDITAR LA IP ANTES DE JUGAR
 # ===========================================================================
-SERVER_IP   = "10.66.66.150"     # IP LAN del servidor (Nitro V5)
+SERVER_IP   = "192.168.10.34"     # IP LAN del servidor (Nitro V5)
 SERVER_PORT = 55555
 # ===========================================================================
 
@@ -40,7 +40,7 @@ if len(sys.argv) > 2:
     SERVER_PORT = int(sys.argv[2])
 
 ASSETS_DIR = "assets"
-MUSIC_DIR = "music"
+MUSIC_DIR = os.path.join("assets", "music")
 PENGUIN_PATHS = [
     os.path.join(ASSETS_DIR, "penguins", "PinguinGeneric.png"),
     os.path.join(ASSETS_DIR, "penguins", "PinguinGeneric.PNG"),
