@@ -30,7 +30,7 @@ HAND_SIZE = 5             # Cartas en mano por jugador (5 como el Card-Jitsu rea
 ELEMENTS = ['fire', 'snow', 'water']
 ELEMENT_ES = {'fire': 'Fuego', 'snow': 'Nieve', 'water': 'Agua'}
 TICK_RATE = 0.25          # Refresh del dashboard (segundos)
-DECK_JSON_PATH = 'deck.json'   # Mazo generado por scrape_assets.py
+DECK_JSON_PATH = 'deck_gui.json'   # Mazo generado por BuildDeckJson.py
 
 # Colores permitidos para el pingüino (debe matchear lo del cliente GUI)
 PENGUIN_COLORS = ['red', 'blue', 'green', 'yellow', 'pink', 'purple', 'black', 'orange']
@@ -43,14 +43,21 @@ DECK_LOADED = False
 
 def load_deck():
     """
-    Carga deck.json si existe. Si no, queda vacío y caemos al modo random
-    (compatibilidad con la versión TUI que no usa imágenes).
+    Carga deck_gui.json. Acepta dos formatos:
+      - {"cards": [...]}  (formato nuevo con _meta)
+      - [...]             (lista directa, formato viejo de Gemini)
+    Si no existe, queda vacío y caemos al modo random.
     """
     global DECK, DECK_LOADED
     try:
-        with open('deck_gui.json', 'r', encoding='utf-8') as f:
-            DECK = json.load(f)
-        DECK = data.get('cards', [])
+        with open(DECK_JSON_PATH, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            DECK = data.get('cards', [])
+        elif isinstance(data, list):
+            DECK = data
+        else:
+            DECK = []
         DECK_LOADED = len(DECK) > 0
         return len(DECK)
     except (FileNotFoundError, json.JSONDecodeError):
@@ -99,8 +106,8 @@ def log_event(msg: str):
 def make_card(card_id: int) -> dict:
     """
     Genera una carta con id único.
-    Si deck.json fue cargado, toma una carta random del mazo (con su ref_image).
-    Si no, genera valores random (modo TUI/legacy).
+    Si el mazo fue cargado, toma una carta random y copia element/value/assets.
+    Si no, genera valores random (modo TUI/legacy sin imágenes).
     """
     if DECK_LOADED and DECK:
         template = random.choice(DECK)
@@ -108,14 +115,13 @@ def make_card(card_id: int) -> dict:
             'id': card_id,
             'element': template['element'],
             'value': template['value'],
-            'ref_image': template.get('ref_image', ''),
-            'color': template.get('color', ''),
+            'assets': template.get('assets', {}),   # rutas de las 4 capas para la GUI
         }
     # Fallback: modo random sin imágenes (compatible con cliente TUI)
     return {
         'id': card_id,
         'element': random.choice(ELEMENTS),
-        'value': random.randint(2, 12),
+        'value': random.randint(2, 10),
     }
 
 def resolve_round(c1: dict, c2: dict) -> int:
@@ -487,8 +493,13 @@ def accept_loop(server_sock: socket.socket):
 # ---------------------------------------------------------------------------
 # main
 # ---------------------------------------------------------------------------
-def main():
-    global running
+def start_network(with_terminal_dashboard: bool = True):
+    """
+    Arranca toda la lógica de red (accept_loop, game_loop) en hilos daemon.
+    Si with_terminal_dashboard=True también lanza el dashboard de terminal.
+    La GUI lo llama con False porque ella misma dibuja el dashboard.
+    Retorna el socket del servidor (para cerrarlo al salir).
+    """
     n_cards = load_deck()
     if n_cards > 0:
         log_event(f"Mazo cargado desde {DECK_JSON_PATH}: {n_cards} cartas")
@@ -502,8 +513,15 @@ def main():
     log_event(f"Servidor escuchando en {HOST}:{PORT}")
 
     threading.Thread(target=accept_loop, args=(server_sock,), daemon=True).start()
-    threading.Thread(target=dashboard_loop, daemon=True).start()
     threading.Thread(target=game_loop, daemon=True).start()
+    if with_terminal_dashboard:
+        threading.Thread(target=dashboard_loop, daemon=True).start()
+    return server_sock
+
+
+def main():
+    global running
+    server_sock = start_network(with_terminal_dashboard=True)
 
     try:
         while True:

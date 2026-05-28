@@ -1,121 +1,122 @@
+#!/usr/bin/env python3
+"""
+BuildDeckJson.py - Generador del mazo para la versión GUI
+==========================================================
+Lee las imágenes que YA tenés en assets/ y arma deck_gui.json con los
+metadatos de cada carta + las rutas de sus 4 capas de imagen.
+
+Reglas de asignación (según lo acordado):
+  - Fuego  -> fondo rojo
+  - Agua   -> fondo azul
+  - Nieve  -> fondo morado (purple)
+  - Valor >= 8 (cartas "altas") -> fondo amarillo
+  - Pingüino central: random del pool assets/cards/*.png
+  - Número: assets/numbers/<valor>.png
+  - Ícono: assets/icons/icon_<elemento>.png
+
+IMPORTANTE: los campos van en INGLÉS (element/value) porque así los
+entiende el server.py. El nombre legible queda en 'name'.
+
+Uso:
+    python3 BuildDeckJson.py
+"""
+
 import json
 import random
 import os
 
-# Configuración de Rutas de Assets (asumidas)
-# Ajusta estas rutas si tus carpetas reales tienen otros nombres
+# Rutas de assets
 ASSETS_DIR = "assets"
 CARDS_IMG_DIR = os.path.join(ASSETS_DIR, "cards")
 NUMBERS_IMG_DIR = os.path.join(ASSETS_DIR, "numbers")
 BACKGROUNDS_IMG_DIR = os.path.join(ASSETS_DIR, "backgrounds")
 ICONS_IMG_DIR = os.path.join(ASSETS_DIR, "icons")
 
-# Nombre del archivo JSON de salida (que usará el servidor)
 DECK_OUTPUT_FILE = "deck_gui.json"
 
-# Rango de valores y elementos del juego
-VALUES_RANGE = range(2, 11) # Del 2 al 10
-ELEMENTS = ["Fuego", "Agua", "Nieve"]
+# Rango de valores y elementos (en inglés para el server)
+VALUES_RANGE = range(2, 11)        # 2..10
+ELEMENTS = ["fire", "water", "snow"]
+ELEMENT_ES = {"fire": "Fuego", "water": "Agua", "snow": "Nieve"}
 
-# --- Lógica de asignación de Assets (Basada en tus respuestas) ---
-
-# Mapeo de elemento a fondo (background)
-# Pregunta 2: Agua es azul, Nieve morado.
+# Fondo por elemento
 ELEMENT_TO_BG = {
-    "Fuego": "red.png",
-    "Agua": "blue.png",
-    "Nieve": "purple.png"
+    "fire": "red.png",
+    "water": "blue.png",
+    "snow": "purple.png",
 }
 
-# Regla especial: "Y las que son muy altas y rojas como el 8, que sean amarillas"
-# Asumiremos "altas" como valor >= 8.
+# Cartas altas -> amarillo
 HIGH_VALUE_THRESHOLD = 8
 HIGH_VALUE_BG = "yellow.png"
 
-# Mapeo de elemento a icono
+# Ícono por elemento
 ELEMENT_TO_ICON = {
-    "Fuego": "icon_fire.png",
-    "Agua": "icon_water.png",
-    "Nieve": "icon_snow.png"
+    "fire": "icon_fire.png",
+    "water": "icon_water.png",
+    "snow": "icon_snow.png",
 }
 
+
 def generate_deck():
-    # 1. Obtener la "pool" de imágenes de pingüinos genéricos (Pregunta 1)
-    # Asumimos que hay 14 archivos en assets/cards/ (1.png...14.png)
+    # Pool de pingüinos
     try:
-        penguin_pool = [f for f in os.listdir(CARDS_IMG_DIR) if f.endswith('.png')]
+        penguin_pool = sorted([f for f in os.listdir(CARDS_IMG_DIR) if f.endswith(".png")])
         if not penguin_pool:
-            raise FileNotFoundError(f"No se encontraron imágenes .png en {CARDS_IMG_DIR}")
-        print(f"-> Se encontraron {len(penguin_pool)} imágenes de pingüinos en la pool.")
+            raise FileNotFoundError(f"No hay .png en {CARDS_IMG_DIR}")
+        print(f"-> {len(penguin_pool)} pingüinos en el pool: {penguin_pool}")
     except FileNotFoundError as e:
         print(f"Error crítico: {e}")
         return None
 
     deck = []
     card_id = 0
-
-    # 2. Generar todas las combinaciones Elemento x Valor (3x9 = 27 cartas)
     for element in ELEMENTS:
         for value in VALUES_RANGE:
-            # Lógica de asignación de assets para esta carta específica:
-
-            # -- Determinar el Fondo (Background) --
-            if value >= HIGH_VALUE_THRESHOLD:
-                bg_file = HIGH_VALUE_BG # Amarilla para valores altos
-            else:
-                bg_file = ELEMENT_TO_BG[element] # Color del elemento
-
-            # -- Determinar el Pingüino (Random de la pool) --
-            # Pregunta 1: "los puedes poner en orden aleatorio"
+            bg_file = HIGH_VALUE_BG if value >= HIGH_VALUE_THRESHOLD else ELEMENT_TO_BG[element]
             penguin_file = random.choice(penguin_pool)
-
-            # -- Determinar el Número (Asumimos formato 'N.png') --
             number_file = f"{value}.png"
-
-            # -- Determinar el Icono --
             icon_file = ELEMENT_TO_ICON[element]
 
-            # Crear el metadato de la carta (lo que leerá el cliente GUI)
-            card_metadata = {
+            deck.append({
                 "id": card_id,
-                "nombre": f"{element} {value}",
-                "elemento": element,
-                "valor": value,
+                "name": f"{ELEMENT_ES[element]} {value}",   # legible, opcional
+                "element": element,                          # INGLÉS para el server
+                "value": value,
                 "assets": {
-                    # Rutas RELATIVAS desde la raíz del proyecto para que el cliente las cargue
-                    "background": os.path.join(BACKGROUNDS_IMG_DIR, bg_file),
-                    "penguin": os.path.join(CARDS_IMG_DIR, penguin_file),
-                    "number": os.path.join(NUMBERS_IMG_DIR, number_file),
-                    "icon": os.path.join(ICONS_IMG_DIR, icon_file)
-                }
-            }
-
-            deck.append(card_metadata)
+                    "background": os.path.join(BACKGROUNDS_IMG_DIR, bg_file).replace("\\", "/"),
+                    "penguin": os.path.join(CARDS_IMG_DIR, penguin_file).replace("\\", "/"),
+                    "number": os.path.join(NUMBERS_IMG_DIR, number_file).replace("\\", "/"),
+                    "icon": os.path.join(ICONS_IMG_DIR, icon_file).replace("\\", "/"),
+                },
+            })
             card_id += 1
 
-    print(f"-> Mazo generado con {len(deck)} cartas de metadatos.")
+    print(f"-> Mazo generado con {len(deck)} cartas.")
     return deck
 
-def save_deck_json(deck):
-    if deck:
-        with open(DECK_OUTPUT_FILE, 'w', encoding='utf-8') as f:
-            json.dump(deck, f, indent=4, ensure_ascii=False)
-        print(f"-> Mazo guardado exitosamente en: {DECK_OUTPUT_FILE}")
-    else:
-        print("-> Error: No se generó el mazo, no se guardó el archivo.")
+
+def save_deck(deck):
+    if not deck:
+        print("-> No se generó el mazo.")
+        return
+    data = {
+        "_meta": {
+            "total_cards": len(deck),
+            "elements": ELEMENTS,
+            "values_range": [min(VALUES_RANGE), max(VALUES_RANGE)],
+        },
+        "cards": deck,
+    }
+    with open(DECK_OUTPUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    print(f"-> Guardado en {DECK_OUTPUT_FILE}")
+
 
 if __name__ == "__main__":
-    print("=== Iniciando generación de mazo GUI (build_deck_json.py) ===")
-    
-    # Verificar si la estructura de carpetas existe antes de empezar
+    print("=== BuildDeckJson (GUI) ===")
     if not os.path.exists(ASSETS_DIR):
-        print(f"Error crítico: La carpeta raíz '{ASSETS_DIR}/' no existe.")
-        print("Asegúrate de tener tus assets organizados antes de correr este script.")
-        exit(1)
-
-    # Generar el mazo (solo metadatos)
-    new_deck = generate_deck()
-
-    # Guardar en el nuevo archivo JSON
-    save_deck_json(new_deck)
+        print(f"Error: no existe '{ASSETS_DIR}/'.")
+        raise SystemExit(1)
+    save_deck(generate_deck())
     print("=== Finalizado ===")
